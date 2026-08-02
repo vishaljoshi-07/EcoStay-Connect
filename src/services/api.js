@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 // Helper for making API requests with auto Authorization header
 export const apiFetch = async (endpoint, options = {}) => {

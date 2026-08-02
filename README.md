@@ -269,5 +269,76 @@ erDiagram
 
 ---
 
+## 🌐 Live URLs (Placeholder)
+- **Frontend (Vercel)**: [https://your-project.vercel.app](https://your-project.vercel.app)
+- **Backend (Render)**: [https://your-backend.onrender.com](https://your-backend.onrender.com)
+
+---
+
+## 🔑 Environment Variables
+The system requires specific environment variables to function correctly in development and production. See `.env.example`.
+
+### Production Environment Variables
+
+**Backend (`.env`)**:
+- `PORT` = (Render assigns automatically, usually 10000)
+- `MONGO_URI` = Your MongoDB Atlas production connection string
+- `JWT_SECRET` = A strong, secure secret string
+- `GEMINI_API_KEY` = Google Gemini API key
+- `GOOGLE_CLIENT_ID` = Google OAuth Client ID
+- `GOOGLE_CLIENT_SECRET` = Google OAuth Client Secret
+- `FRONTEND_URL` = Your Vercel frontend URL (e.g. `https://your-project.vercel.app`)
+
+**Frontend (Vercel Environment Variables)**:
+- `VITE_API_URL` = Your Render backend URL (e.g. `https://your-backend.onrender.com/api`)
+
+---
+
+## 🗄️ MongoDB Atlas Setup
+1. Create a free cluster at [MongoDB Atlas](https://www.mongodb.com/atlas).
+2. Go to **Network Access** and add IP `0.0.0.0/0` to allow connections from Render.
+3. In **Database Access**, create a user with a strong password.
+4. Go to **Databases -> Connect**, choose Node.js, and copy your connection string.
+5. Replace `<password>` in the connection string and use it for `MONGO_URI`.
+
+---
+
+## 🚀 Frontend Deployment (Vercel)
+1. Push your code to GitHub.
+2. Sign in to [Vercel](https://vercel.com).
+3. Click **Add New -> Project** and import your repository.
+4. Set the **Root Directory** to your frontend (or project root if it's there).
+5. Add the `VITE_API_URL` to Vercel Environment Variables.
+6. Click **Deploy**. Vercel will auto-detect Vite and build your SPA correctly.
+
+---
+
+## ☁️ Backend Deployment (Render)
+1. Sign in to [Render](https://render.com).
+2. Create a new **Web Service**.
+3. Connect your GitHub repository.
+4. **Root Directory**: `backend`
+5. **Build Command**: `npm install`
+6. **Start Command**: `npm start`
+7. Add all backend environment variables (`MONGO_URI`, `JWT_SECRET`, etc.) in Render settings.
+8. Click **Deploy**.
+
+---
+
+## ⚠️ Known Free Tier Limitations
+- **Render Backend Spin-down**: Render's free tier spins down inactive web services after 15 minutes of inactivity. Initial requests may take 30-50 seconds to wake the server up.
+- **MongoDB Atlas Storage**: The free cluster is limited to 512MB storage and shared RAM.
+- **Vercel Edge Functions**: Free tier usage limits apply to Vercel deployments.
+
+---
+
+## 🚑 Troubleshooting Guide
+- **CORS Errors**: Ensure your `FRONTEND_URL` in the backend exactly matches the deployed Vercel URL (no trailing slash).
+- **Google OAuth Redirect Mismatch**: Update your Google Cloud Console OAuth settings to include your production backend and frontend callback URLs.
+- **API Call Failures**: Double check that `VITE_API_URL` points to `/api` at the end of the backend URL.
+- **MongoDB Connection Error**: Check your IP whitelisting in MongoDB Atlas (ensure `0.0.0.0/0` is allowed).
+
+---
+
 ## 📄 License
 This project is open-source and available under the [MIT License](LICENSE).

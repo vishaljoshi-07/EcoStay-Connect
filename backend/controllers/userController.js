@@ -6,7 +6,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const generateToken = (id) => {
   return jwt.sign(
     { id },
-    process.env.JWT_SECRET || 'ecostay_connect_jwt_secret_key_2026_super_secure',
+    process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
 };

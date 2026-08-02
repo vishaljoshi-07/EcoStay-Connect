@@ -39,7 +39,7 @@ router.get(
   (req, res) => {
     // Generate JWT token for OAuth user and redirect to frontend
     const token = generateToken(req.user._id);
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     res.redirect(`${clientUrl}/login?token=${token}&email=${encodeURIComponent(req.user.email)}`);
   }
 );

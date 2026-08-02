@@ -16,9 +16,9 @@ function Home() {
         setError(null);
 
         // Fetch from API: use search endpoint if filtering by location
-        let url = 'http://localhost:5000/api/homestays';
+        let url = `${import.meta.env.VITE_API_URL}/homestays`;
         if (filterLoc !== 'All') {
-          url = `http://localhost:5000/api/homestays/search?location=${encodeURIComponent(filterLoc)}`;
+          url = `${import.meta.env.VITE_API_URL}/homestays/search?location=${encodeURIComponent(filterLoc)}`;
         }
 
         const response = await fetch(url);

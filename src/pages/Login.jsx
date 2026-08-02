@@ -46,7 +46,7 @@ function Login() {
   };
 
   const handleGoogleSignIn = () => {
-    window.location.href = 'http://localhost:5000/api/users/google';
+    window.location.href = `${import.meta.env.VITE_API_URL}/users/google`;
   };
 
   return (
