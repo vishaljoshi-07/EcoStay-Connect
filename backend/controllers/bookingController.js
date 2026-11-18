@@ -80,6 +80,18 @@ const createBooking = asyncHandler(async (req, res) => {
 
   const populatedBooking = await Booking.findById(booking._id).populate('homestayId');
 
+  console.log('\n==================================================');
+  console.log('🏡 [BOOKING RESERVATION CREATED]');
+  console.log(`Booking ID: ${booking._id}`);
+  console.log(`Customer:   ${userCustomerName} (${userEmail})`);
+  console.log(`Homestay:   ${homestay.title || homestay.name}`);
+  console.log(`Check-In:   ${new Date(checkIn).toLocaleDateString()}`);
+  console.log(`Check-Out:  ${new Date(checkOut).toLocaleDateString()}`);
+  console.log(`Guests:     ${guests}`);
+  console.log(`Status:     ${booking.bookingStatus}`);
+  console.log(`Time:       ${new Date().toLocaleString()}`);
+  console.log('==================================================\n');
+
   res.status(201).json({
     success: true,
     message: 'Booking created successfully',
@@ -132,6 +144,8 @@ const deleteBooking = asyncHandler(async (req, res) => {
   }
 
   await Booking.findByIdAndDelete(req.params.id);
+
+  console.log(`[BOOKING CANCELLED] Booking ID ${req.params.id} was successfully cancelled by ${req.user.name}`);
 
   res.status(200).json({
     success: true,

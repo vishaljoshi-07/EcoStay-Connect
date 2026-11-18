@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createLocalModel } = require('../config/localDb');
 
 const homestaySchema = new mongoose.Schema({
   title: {
@@ -66,6 +67,25 @@ homestaySchema.virtual('sustainabilityTags').get(function() {
   this.ecoFeatures = v;
 });
 
-const Homestay = mongoose.model('Homestay', homestaySchema);
+const MongoHomestay = mongoose.model('Homestay', homestaySchema);
+const LocalHomestay = createLocalModel('homestays');
 
-module.exports = Homestay;
+const HomestayProxy = new Proxy(MongoHomestay, {
+  get(target, prop) {
+    if (mongoose.connection.readyState === 1 && global.isMongoConnected) {
+      return target[prop];
+    }
+    if (prop in LocalHomestay) {
+      return LocalHomestay[prop];
+    }
+    return target[prop];
+  },
+  construct(target, args) {
+    if (mongoose.connection.readyState === 1 && global.isMongoConnected) {
+      return new target(...args);
+    }
+    return LocalHomestay.create(args[0]);
+  }
+});
+
+module.exports = HomestayProxy;

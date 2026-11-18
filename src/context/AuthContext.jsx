@@ -57,8 +57,15 @@ export function AuthProvider({ children }) {
           }
         })
         .catch((err) => {
-          console.error('Failed to restore session:', err.message);
-          if (isMounted) {
+          console.warn('Backend offline, preserving local cached session:', err.message);
+          const savedUser = localStorage.getItem('ecostay_user');
+          if (savedUser && isMounted) {
+            try {
+              setUser(JSON.parse(savedUser));
+            } catch (e) {
+              logout();
+            }
+          } else if (isMounted) {
             logout();
           }
         })

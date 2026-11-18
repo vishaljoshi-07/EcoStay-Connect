@@ -30,7 +30,12 @@ router.post('/', authRateLimiter, validateRegister, registerUser);
 // Google OAuth Routes
 router.get(
   '/google',
-  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
+  (req, res, next) => {
+    if (!process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID.includes('demo_google')) {
+      return res.status(503).json({ success: false, message: 'Google OAuth is disabled in demo mode. Please use standard email/password login.' });
+    }
+    passport.authenticate('google', { scope: ['profile', 'email'], session: false })(req, res, next);
+  }
 );
 
 router.get(

@@ -1,8 +1,23 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const passport = require('passport');
+
+// Load environment variables - search backend/.env first, then root .env
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+// Default fallbacks
+process.env.PORT = process.env.PORT || 5000;
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'ecostay_connect_jwt_secret_key_2026_super_secure';
+
+// Database connection
 const connectDB = require('./config/db');
+connectDB();
+
+// Passport Config (safe, won't throw if clientID is missing)
+require('./config/passport');
 
 // Routes
 const homestayRoutes = require('./routes/homestayRoutes');
@@ -13,27 +28,11 @@ const aiRoutes = require('./routes/aiRoutes');
 // Error Middleware
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
-// Load environment variables
-dotenv.config();
-
-// Passport Config
-require('./config/passport');
-
-// Connect to MongoDB
-connectDB();
-
 const app = express();
 
 // Middlewares
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  process.env.FRONTEND_URL
-];
-
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow all origins for the internship project to prevent deployment blockers
     callback(null, true);
   },
   credentials: true,
@@ -42,8 +41,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(passport.initialize());
-
-
 
 // API Routes
 app.use('/api/homestays', homestayRoutes);
@@ -57,9 +54,9 @@ app.get('/', (req, res) => {
     message: 'Welcome to EcoStay Connect API',
     version: '2.0.0',
     services: {
-      auth: 'JWT & Google OAuth 2.0',
+      auth: 'JWT Authentication',
       ai: 'Google Gemini 1.5 Flash',
-      database: 'MongoDB Atlas'
+      database: global.isMongoConnected ? 'MongoDB Atlas' : 'Local JSON Persistent Database'
     },
     status: 'Running'
   });
@@ -72,5 +69,6 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`\x1b[32m%s\x1b[0m`, `🚀 EcoStay Backend API running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`   Health check endpoint: http://localhost:${PORT}/`);
 });

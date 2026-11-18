@@ -36,6 +36,15 @@ const registerUser = asyncHandler(async (req, res) => {
   if (user) {
     const token = generateToken(user._id);
 
+    console.log('\n==================================================');
+    console.log('🌿 [USER REGISTRATION SUCCESSFUL]');
+    console.log(`User ID:   ${user._id}`);
+    console.log(`Full Name: ${user.name}`);
+    console.log(`Email:     ${user.email}`);
+    console.log(`Role:      ${user.role}`);
+    console.log(`Time:      ${new Date().toLocaleString()}`);
+    console.log('==================================================\n');
+
     res.status(201).json({
       success: true,
       message: 'Registration successful',
@@ -67,6 +76,8 @@ const loginUser = asyncHandler(async (req, res) => {
   // Check user & password match
   if (user && (await user.matchPassword(password))) {
     const token = generateToken(user._id);
+
+    console.log(`[AUTH LOGIN] User authenticated: ${user.name} (${user.email}) - Role: ${user.role}`);
 
     res.status(200).json({
       success: true,

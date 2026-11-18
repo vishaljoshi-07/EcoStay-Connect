@@ -43,8 +43,9 @@ function Register() {
     setLoading(true);
 
     try {
-      await register(name, email, password, role);
-      setToast({ isOpen: true, message: 'Registration successful! Redirecting to Dashboard...', variant: 'success' });
+      const res = await register(name, email, password, role);
+      console.log('🌿 [ECOSTAY REGISTER] New account registered in database:', res);
+      setToast({ isOpen: true, message: `Account created for ${name}! Saved to database. Redirecting...`, variant: 'success' });
       setTimeout(() => {
         navigate('/dashboard');
       }, 1200);

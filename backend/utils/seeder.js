@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 const Homestay = require('../models/homestayModel');
 const Booking = require('../models/bookingModel');
 const User = require('../models/userModel');
@@ -99,62 +101,120 @@ const homestays = [
     price: 3800,
     rating: 4.8,
     reviewsCount: 31,
-    ownerName: 'Ramesh Sharma',
-    availability: false
+    ownerName: 'Sunita Sharma',
+    availability: true
   }
 ];
 
+const seedLocalFile = async () => {
+  const DB_FILE = path.join(__dirname, '..', 'data', 'db.json');
+  const salt = await bcrypt.genSalt(10);
+  
+  const seededUsers = await Promise.all(users.map(async (u, idx) => ({
+    _id: `64a00000000000000000010${idx + 1}`,
+    name: u.name,
+    email: u.email,
+    password: await bcrypt.hash(u.password, salt),
+    role: u.role,
+    profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+    savedHomestays: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  })));
+
+  const seededHomestays = homestays.map((h, idx) => ({
+    _id: `64a00000000000000000000${idx + 1}`,
+    title: h.title,
+    name: h.title,
+    location: h.location,
+    ecoFeatures: h.ecoFeatures,
+    sustainabilityTags: h.ecoFeatures,
+    description: h.description,
+    image: h.image,
+    price: h.price,
+    rating: h.rating,
+    reviewsCount: h.reviewsCount,
+    ownerName: h.ownerName,
+    availability: h.availability,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }));
+
+  const seededBookings = [
+    {
+      _id: '64a000000000000000000201',
+      customerName: 'Traveler Eco User',
+      email: 'traveler@ecostay.org',
+      homestayId: seededHomestays[0]._id,
+      checkIn: new Date(Date.now() + 86400000 * 2).toISOString(),
+      checkOut: new Date(Date.now() + 86400000 * 5).toISOString(),
+      guests: 2,
+      bookingStatus: 'Confirmed',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
+
+  const dbData = {
+    users: seededUsers,
+    homestays: seededHomestays,
+    bookings: seededBookings
+  };
+
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
+    console.log(`[LocalDB Seeder] Saved to ${DB_FILE}`);
+  } catch (err) {
+    console.log(`[LocalDB Seeder] Seeded in memory.`);
+  }
+
+  console.log(`🌿 Seeded ${seededUsers.length} Users, ${seededHomestays.length} Homestays, and ${seededBookings.length} Bookings to Local Database.`);
+};
+
 const seedData = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/ecostay_connect';
-    await mongoose.connect(mongoUri);
-    console.log('Database connected for seeding.');
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    
+    // Check if remote MongoDB is available
+    if (mongoUri && !mongoUri.includes('username:password') && !mongoUri.includes('ecostayadmin:MyPassword123')) {
+      try {
+        await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2500 });
+        console.log(`Connected to MongoDB Atlas: ${mongoUri}`);
 
-    // Clear existing data
-    await Booking.deleteMany({});
-    await Homestay.deleteMany({});
-    await User.deleteMany({});
-    console.log('Existing collections cleared.');
+        await Booking.deleteMany({});
+        await Homestay.deleteMany({});
+        await User.deleteMany({});
 
-    // Create Users via User.create to trigger pre('save') password hashing
-    const seededUsers = [];
-    for (const u of users) {
-      const createdUser = await User.create(u);
-      seededUsers.push(createdUser);
-    }
-    console.log(`${seededUsers.length} Users seeded.`);
+        const seededUsers = await User.insertMany(users);
+        console.log(`${seededUsers.length} Users seeded into MongoDB.`);
 
-    // Seed Homestays
-    const seededHomestays = await Homestay.insertMany(homestays);
-    console.log(`${seededHomestays.length} Homestays seeded.`);
+        const seededHomestays = await Homestay.insertMany(homestays);
+        console.log(`${seededHomestays.length} Homestays seeded into MongoDB.`);
 
-    // Seed sample Bookings
-    const bookingList = [
-      {
-        customerName: 'Traveler Eco User',
-        email: 'traveler@ecostay.org',
-        homestayId: seededHomestays[0]._id, // The Whispering Pines Sanctuary
-        checkIn: new Date('2026-08-10'),
-        checkOut: new Date('2026-08-15'),
-        guests: 2,
-        bookingStatus: 'Confirmed'
-      },
-      {
-        customerName: 'Traveler Eco User',
-        email: 'traveler@ecostay.org',
-        homestayId: seededHomestays[1]._id, // Emerald Valley Bamboo Retreat
-        checkIn: new Date('2026-09-01'),
-        checkOut: new Date('2026-09-05'),
-        guests: 3,
-        bookingStatus: 'Pending'
+        const bookingList = [
+          {
+            customerName: 'Traveler Eco User',
+            email: 'traveler@ecostay.org',
+            homestayId: seededHomestays[0]._id,
+            checkIn: new Date(Date.now() + 86400000 * 2),
+            checkOut: new Date(Date.now() + 86400000 * 5),
+            guests: 2,
+            bookingStatus: 'Confirmed'
+          }
+        ];
+
+        const seededBookings = await Booking.insertMany(bookingList);
+        console.log(`${seededBookings.length} Bookings seeded into MongoDB.`);
+
+        console.log('MongoDB seeded successfully.');
+        process.exit(0);
+      } catch (err) {
+        console.log(`MongoDB connection failed (${err.message}). Seeding Local Database instead...`);
       }
-    ];
+    }
 
-    const seededBookings = await Booking.insertMany(bookingList);
-    console.log(`${seededBookings.length} Bookings seeded.`);
-
-    console.log('Data seeded successfully.');
-    process.exit();
+    await seedLocalFile();
+    process.exit(0);
   } catch (error) {
     console.error(`Seeding Error: ${error.message}`);
     process.exit(1);
@@ -163,22 +223,30 @@ const seedData = async () => {
 
 const destroyData = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/ecostay_connect';
-    await mongoose.connect(mongoUri);
-    
-    await Booking.deleteMany({});
-    await Homestay.deleteMany({});
-    await User.deleteMany({});
-    
-    console.log('All data deleted from database.');
-    process.exit();
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (mongoUri) {
+      try {
+        await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2500 });
+        await Booking.deleteMany({});
+        await Homestay.deleteMany({});
+        await User.deleteMany({});
+        console.log('All data deleted from MongoDB.');
+      } catch (e) {}
+    }
+
+    const DB_FILE = path.join(__dirname, '..', 'data', 'db.json');
+    if (fs.existsSync(DB_FILE)) {
+      fs.writeFileSync(DB_FILE, JSON.stringify({ users: [], homestays: [], bookings: [] }, null, 2));
+      console.log('Local database cleared.');
+    }
+
+    process.exit(0);
   } catch (error) {
     console.error(`Error deleting data: ${error.message}`);
     process.exit(1);
   }
 };
 
-// Check for command argument
 if (process.argv[2] === '-d') {
   destroyData();
 } else {

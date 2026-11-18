@@ -1,12 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 /**
- * Reusable Modal Component.
+ * Reusable Modal Component rendered with React Portal into document.body
+ * to avoid CSS transform / overflow clipping issues.
  * 
  * @param {Object} props - The component props.
  * @param {boolean} props.isOpen - Controls the visibility of the modal.
- * @param {Function} props.onClose - Callback triggered when the modal requests closure (clicking backdrop, X button, or Esc key).
+ * @param {Function} props.onClose - Callback triggered when the modal requests closure.
  * @param {string} props.title - Modal title text shown in the header.
  * @param {React.ReactNode} props.children - The content body of the modal.
  * @param {React.ReactNode} [props.footer] - Optional custom buttons/actions for the modal footer.
@@ -20,6 +22,13 @@ function Modal({
   footer,
   size = 'md'
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
   // Close on Escape key press
   useEffect(() => {
     const handleEscape = (e) => {
@@ -43,7 +52,7 @@ function Modal({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const sizes = {
     sm: 'max-w-md',
@@ -51,17 +60,17 @@ function Modal({
     lg: 'max-w-3xl'
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300"
+        className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300"
         onClick={onClose}
       />
       
       {/* Modal Dialog Container */}
       <div 
-        className={`w-full ${sizes[size]} bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative z-10 transform scale-100 transition-all duration-300 flex flex-col max-h-[90vh]`}
+        className={`w-full ${sizes[size]} bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative z-10 my-auto transform transition-all duration-300 flex flex-col max-h-[90vh]`}
         role="dialog"
         aria-modal="true"
       >
@@ -72,7 +81,7 @@ function Modal({
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors focus:outline-none"
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors focus:outline-none cursor-pointer"
             aria-label="Close modal"
           >
             <X className="h-5 w-5" />
@@ -93,6 +102,8 @@ function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 export default Modal;

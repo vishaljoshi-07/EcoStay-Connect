@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Hero from '../components/Hero';
 import Card from '../components/Card';
 import { Leaf, Award, Globe, ArrowRight, ShieldCheck, HelpCircle } from 'lucide-react';
+import { homestayApi } from '../services/api';
+import { getMockHomestays } from '../services/mockData';
 
 function Home() {
   const [filterLoc, setFilterLoc] = useState('All');
@@ -15,23 +17,18 @@ function Home() {
         setLoading(true);
         setError(null);
 
-        // Fetch from API: use search endpoint if filtering by location
-        let url = `${import.meta.env.VITE_API_URL}/homestays`;
-        if (filterLoc !== 'All') {
-          url = `${import.meta.env.VITE_API_URL}/homestays/search?location=${encodeURIComponent(filterLoc)}`;
-        }
+        const res = filterLoc !== 'All' 
+          ? await homestayApi.search(filterLoc)
+          : await homestayApi.getAll();
 
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch homestays: ${response.statusText}`);
+        if (res && res.data && res.data.length > 0) {
+          setHomestays(res.data);
+        } else {
+          setHomestays(getMockHomestays(filterLoc));
         }
-        const json = await response.json();
-        
-        // Save the API returned array (json.data contains the homestays list)
-        setHomestays(json.data || []);
       } catch (err) {
-        console.error('Error fetching homestays:', err);
-        setError(err.message || 'Something went wrong while loading homestays.');
+        console.warn('Backend unavailable, loading local dummy homestays:', err.message);
+        setHomestays(getMockHomestays(filterLoc));
       } finally {
         setLoading(false);
       }

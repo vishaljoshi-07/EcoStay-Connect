@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { createLocalModel } = require('../config/localDb');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -66,6 +67,25 @@ userSchema.methods.toJSON = function() {
   return obj;
 };
 
-const User = mongoose.model('User', userSchema);
+const MongoUser = mongoose.model('User', userSchema);
+const LocalUser = createLocalModel('users');
 
-module.exports = User;
+const UserProxy = new Proxy(MongoUser, {
+  get(target, prop) {
+    if (mongoose.connection.readyState === 1 && global.isMongoConnected) {
+      return target[prop];
+    }
+    if (prop in LocalUser) {
+      return LocalUser[prop];
+    }
+    return target[prop];
+  },
+  construct(target, args) {
+    if (mongoose.connection.readyState === 1 && global.isMongoConnected) {
+      return new target(...args);
+    }
+    return LocalUser.create(args[0]);
+  }
+});
+
+module.exports = UserProxy;

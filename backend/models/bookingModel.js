@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createLocalModel } = require('../config/localDb');
 
 const bookingSchema = new mongoose.Schema({
   customerName: {
@@ -41,6 +42,25 @@ const bookingSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-const Booking = mongoose.model('Booking', bookingSchema);
+const MongoBooking = mongoose.model('Booking', bookingSchema);
+const LocalBooking = createLocalModel('bookings');
 
-module.exports = Booking;
+const BookingProxy = new Proxy(MongoBooking, {
+  get(target, prop) {
+    if (mongoose.connection.readyState === 1 && global.isMongoConnected) {
+      return target[prop];
+    }
+    if (prop in LocalBooking) {
+      return LocalBooking[prop];
+    }
+    return target[prop];
+  },
+  construct(target, args) {
+    if (mongoose.connection.readyState === 1 && global.isMongoConnected) {
+      return new target(...args);
+    }
+    return LocalBooking.create(args[0]);
+  }
+});
+
+module.exports = BookingProxy;

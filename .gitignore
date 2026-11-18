@@ -25,3 +25,26 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Unnecessary media, screenshot dumps & temporary generator scripts
+*.pptx
+*.jpeg
+*.jpg
+*.dot
+capture_*.js
+take_screenshots.js
+make_api_screenshot.js
+generate_*.py
+build_*.py
+create_*.py
+finalize_*.py
+api_test_mock.html
+ai_*.png
+auth_*.png
+screenshot_*.png
+dashboard_*.jpg
+homestay_*.jpg
+er_diagram_*.jpg
+W6_*.pdf
+W7_*.pdf
+WhatsApp*.jpeg

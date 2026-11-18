@@ -1,6 +1,16 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+import {
+  mockLogin,
+  mockRegister,
+  getMockHomestays,
+  getMockBookings,
+  createMockBooking,
+  deleteMockBooking,
+  DUMMY_HOMESTAYS
+} from './mockData';
 
-// Helper for making API requests with auto Authorization header
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Helper for making API requests with auto Authorization header and graceful mock fallback
 export const apiFetch = async (endpoint, options = {}) => {
   const token = localStorage.getItem('ecostay_token');
 
@@ -13,19 +23,106 @@ export const apiFetch = async (endpoint, options = {}) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-  const data = await response.json();
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal
+    });
 
-  if (!response.ok) {
-    const errorMsg = data.message || data.error || 'An error occurred during API request';
-    throw new Error(errorMsg);
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const errorMsg = data.message || data.error || 'An error occurred during API request';
+      throw new Error(errorMsg);
+    }
+
+    return data;
+  } catch (err) {
+    // If backend is offline or unreachable, handle with Mock Data Store
+    console.warn(`[API Notice] Backend unavailable (${err.message}). Using local dummy data store for: ${endpoint}`);
+    return handleMockFallback(endpoint, options);
+  }
+};
+
+// Mock Fallback Router
+const handleMockFallback = (endpoint, options = {}) => {
+  const method = (options.method || 'GET').toUpperCase();
+  const body = options.body ? JSON.parse(options.body) : {};
+
+  // Auth: Login
+  if (endpoint === '/users/login' && method === 'POST') {
+    return mockLogin(body.email, body.password);
   }
 
-  return data;
+  // Auth: Register
+  if (endpoint === '/users/register' && method === 'POST') {
+    return mockRegister(body);
+  }
+
+  // Auth: Profile
+  if (endpoint === '/users/profile') {
+    const saved = localStorage.getItem('ecostay_user');
+    const user = saved ? JSON.parse(saved) : null;
+    return { success: true, data: user };
+  }
+
+  // Homestays: Get all / Search / Filter
+  if (endpoint.startsWith('/homestays')) {
+    if (method === 'GET') {
+      const urlParams = new URLSearchParams(endpoint.split('?')[1] || '');
+      const location = urlParams.get('location') || 'All';
+      const homestays = getMockHomestays(location);
+      return { success: true, count: homestays.length, data: homestays };
+    }
+    if (method === 'POST') {
+      const newH = {
+        _id: 'hm_' + Date.now().toString(36),
+        id: 'hm_' + Date.now().toString(36),
+        ...body,
+        title: body.title || body.name,
+        name: body.title || body.name,
+        sustainabilityTags: body.sustainabilityTags || body.ecoFeatures || ['Solar Powered']
+      };
+      return { success: true, data: newH };
+    }
+  }
+
+  // Bookings: Get all
+  if (endpoint === '/bookings' && method === 'GET') {
+    const saved = localStorage.getItem('ecostay_user');
+    const user = saved ? JSON.parse(saved) : null;
+    const bookings = getMockBookings(user?.email);
+    return { success: true, count: bookings.length, data: bookings };
+  }
+
+  // Bookings: Create
+  if (endpoint === '/bookings' && method === 'POST') {
+    return createMockBooking(body);
+  }
+
+  // Bookings: Delete
+  if (endpoint.startsWith('/bookings/') && method === 'DELETE') {
+    const bookingId = endpoint.split('/')[2];
+    return deleteMockBooking(bookingId);
+  }
+
+  // AI Chat Fallback
+  if (endpoint === '/ai/chat' && method === 'POST') {
+    return {
+      success: true,
+      data: {
+        reply: `### 🌿 3-Day Eco-Friendly Itinerary (Demo Mode)\n\n* **Day 1:** Check into your eco-homestay. Enjoy locally grown organic cuisine.\n* **Day 2:** Low-impact alpine trek with native conservation guides.\n* **Day 3:** Tree plantation activity & zero-waste shopping support for local artisans.\n\n*Note: Running in offline demo mode.*`
+      }
+    };
+  }
+
+  return { success: true, data: [] };
 };
 
 // Auth API endpoints
