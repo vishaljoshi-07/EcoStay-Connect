@@ -73,8 +73,14 @@ const loginUser = asyncHandler(async (req, res) => {
   // Find user by email
   const user = await User.findOne({ email: email.toLowerCase() });
 
+  // If user does not exist, warn to create account first
+  if (!user) {
+    res.status(404);
+    throw new Error('No account found with this email. Please register and create an account first.');
+  }
+
   // Check user & password match
-  if (user && (await user.matchPassword(password))) {
+  if (await user.matchPassword(password)) {
     const token = generateToken(user._id);
 
     console.log(`[AUTH LOGIN] User authenticated: ${user.name} (${user.email}) - Role: ${user.role}`);
@@ -95,7 +101,7 @@ const loginUser = asyncHandler(async (req, res) => {
     });
   } else {
     res.status(401);
-    throw new Error('Invalid email or password');
+    throw new Error('Incorrect password. Please verify your password and try again.');
   }
 });
 

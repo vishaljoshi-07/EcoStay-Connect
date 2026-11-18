@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ShieldCheck, Leaf, ArrowRight, UserCheck } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ShieldCheck, Leaf, ArrowRight, UserCheck, AlertCircle, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/ui/Toast';
 
@@ -9,6 +9,7 @@ function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [unregisteredError, setUnregisteredError] = useState(null);
   const [toast, setToast] = useState({ isOpen: false, message: '', variant: 'success' });
   
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ function Login() {
 
   const performLogin = async (userEmail, userPassword) => {
     setLoading(true);
+    setUnregisteredError(null);
     try {
       await login(userEmail, userPassword);
       setToast({ isOpen: true, message: 'Authenticated successfully! Redirecting to dashboard...', variant: 'success' });
@@ -26,7 +28,15 @@ function Login() {
         navigate(fromPath, { replace: true });
       }, 800);
     } catch (err) {
-      setToast({ isOpen: true, message: err.message || 'Login failed. Please try again.', variant: 'error' });
+      const msg = err.message || 'Login failed. Please try again.';
+      const isUnregistered = msg.toLowerCase().includes('create an account') || msg.toLowerCase().includes('register') || msg.toLowerCase().includes('no account found');
+      
+      if (isUnregistered) {
+        setUnregisteredError(msg);
+        setToast({ isOpen: true, message: msg, variant: 'warning' });
+      } else {
+        setToast({ isOpen: true, message: msg, variant: 'error' });
+      }
     } finally {
       setLoading(false);
     }
@@ -51,6 +61,7 @@ function Login() {
   const handleQuickDemoLogin = (demoEmail, demoPassword) => {
     setEmail(demoEmail);
     setPassword(demoPassword);
+    setUnregisteredError(null);
     performLogin(demoEmail, demoPassword);
   };
 
@@ -65,10 +76,10 @@ function Login() {
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-200/50 dark:bg-emerald-900/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Login Card */}
-      <div className="bg-white dark:bg-slate-800 max-w-md w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-100/80 dark:border-slate-700/60 relative z-10 flex flex-col p-8 md:p-10 space-y-6 transition-colors duration-200">
+      <div className="bg-white dark:bg-slate-800 max-w-md w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-100/80 dark:border-slate-700/60 relative z-10 flex flex-col p-8 md:p-10 space-y-5 transition-colors duration-200">
         
         {/* Header */}
-        <div className="text-center space-y-3">
+        <div className="text-center space-y-2">
           <div className="inline-flex p-3 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 mx-auto">
             <Leaf className="h-6 w-6 animate-bounce" />
           </div>
@@ -80,11 +91,33 @@ function Login() {
           </p>
         </div>
 
+        {/* Unregistered User Warning Alert Box */}
+        {unregisteredError && (
+          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 text-left space-y-2.5 animate-fade-in shadow-xs">
+            <div className="flex items-center space-x-2 text-xs font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+              <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>Unregistered Account Warning</span>
+            </div>
+            <p className="text-xs text-amber-800 dark:text-amber-300 font-medium leading-relaxed">
+              {unregisteredError}
+            </p>
+            <div className="pt-1">
+              <Link
+                to="/register"
+                className="inline-flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>Create Your Account Now</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Quick Demo Login Preset Banner */}
         <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl p-3.5 space-y-2 text-left">
           <div className="flex items-center space-x-1.5 text-xs font-extrabold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
             <UserCheck className="h-4 w-4 text-emerald-600" />
-            <span>Quick 1-Click Demo Login</span>
+            <span>Pre-Registered Demo Accounts</span>
           </div>
           <div className="grid grid-cols-2 gap-2 pt-1">
             <button
@@ -117,7 +150,10 @@ function Login() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setUnregisteredError(null);
+                }}
                 placeholder="you@domain.com"
                 disabled={loading}
                 className="w-full bg-transparent py-3.5 pl-12 pr-4 text-sm font-semibold text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none"

@@ -181,21 +181,12 @@ export const mockLogin = (email, password) => {
   const qEmail = (email || '').trim().toLowerCase();
   
   // Find in pre-seeded or registered users
-  let user = users.find(u => u.email.toLowerCase() === qEmail);
+  let user = users.find(u => u.email && u.email.toLowerCase() === qEmail);
 
-  // If not found, allow instant login by auto-creating a traveler session for any valid email
+  // If user is not registered, warn them to create an account first
   if (!user) {
-    user = {
-      _id: 'usr_' + Date.now().toString(36),
-      id: 'usr_' + Date.now().toString(36),
-      name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Eco Traveler',
-      email: qEmail,
-      role: 'customer',
-      profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
-      savedHomestays: []
-    };
-    users.push(user);
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    console.warn(`[ECOSTAY AUTH WARNING] Login failed: No account found for '${qEmail}'. Registration required.`);
+    throw new Error('No account found with this email. Please register and create an account first.');
   }
 
   const token = 'mock_jwt_token_' + Date.now() + '_' + Math.random().toString(36).substring(2);
