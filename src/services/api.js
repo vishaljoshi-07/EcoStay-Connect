@@ -5,6 +5,7 @@ import {
   getMockBookings,
   createMockBooking,
   deleteMockBooking,
+  generateMockAiResponse,
   DUMMY_HOMESTAYS
 } from './mockData';
 
@@ -23,31 +24,42 @@ export const apiFetch = async (endpoint, options = {}) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  let response;
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
       signal: controller.signal
     });
 
     clearTimeout(timeoutId);
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const errorMsg = data.message || data.error || 'An error occurred during API request';
-      throw new Error(errorMsg);
-    }
-
-    return data;
   } catch (err) {
-    // If backend is offline or unreachable, handle with Mock Data Store
-    console.warn(`[API Notice] Backend unavailable (${err.message}). Using local dummy data store for: ${endpoint}`);
+    // Only fall back to dummy mock data when the network fails or backend is unreachable
+    console.warn(`[API Notice] Backend unreachable (${err.message}). Using local dummy data store for: ${endpoint}`);
     return handleMockFallback(endpoint, options);
   }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (parseErr) {
+    data = {};
+  }
+
+  // If server responded with an error (e.g. 401 Incorrect password, 404 No account, 400 Bad request),
+  // DO NOT mask it with mock fallback! Throw the real error so user sees the message.
+  if (!response.ok) {
+    const errorMsg = data.message || data.error || `Request failed with status ${response.status}`;
+    const err = new Error(errorMsg);
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
 };
 
 // Mock Fallback Router
@@ -112,12 +124,17 @@ const handleMockFallback = (endpoint, options = {}) => {
     return deleteMockBooking(bookingId);
   }
 
-  // AI Chat Fallback
+  // AI Chat Fallback (Comprehensive dynamic knowledge engine)
   if (endpoint === '/ai/chat' && method === 'POST') {
+    const answer = generateMockAiResponse(body.prompt);
     return {
       success: true,
       data: {
-        reply: `### 🌿 3-Day Eco-Friendly Itinerary (Demo Mode)\n\n* **Day 1:** Check into your eco-homestay. Enjoy locally grown organic cuisine.\n* **Day 2:** Low-impact alpine trek with native conservation guides.\n* **Day 3:** Tree plantation activity & zero-waste shopping support for local artisans.\n\n*Note: Running in offline demo mode.*`
+        prompt: body.prompt,
+        response: answer,
+        reply: answer,
+        source: 'EcoStay AI Engine (Demo Mode)',
+        timestamp: new Date()
       }
     };
   }
@@ -183,8 +200,13 @@ export const bookingApi = {
 
 // AI Assistant API endpoints
 export const aiApi = {
-  chat: (prompt) => apiFetch('/ai/chat', {
-    method: 'POST',
-    body: JSON.stringify({ prompt }),
-  }),
+  chat: (prompt, customApiKey) => {
+    const key = customApiKey || localStorage.getItem('ecostay_gemini_key') || '';
+    const headers = key ? { 'x-gemini-api-key': key.trim() } : {};
+    return apiFetch('/ai/chat', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ prompt }),
+    });
+  },
 };

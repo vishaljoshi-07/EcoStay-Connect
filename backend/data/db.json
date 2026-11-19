@@ -32,6 +32,16 @@
       "savedHomestays": [],
       "createdAt": "2026-01-01T00:00:00.000Z",
       "updatedAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "hello",
+      "email": "hello@yo.com",
+      "password": "$2b$10$5hnvit/y2rzAAXgb/dcw2OUJtzkj6mOd43FB2XG46IkG81xC9dZM6",
+      "role": "customer",
+      "_id": "fa7bfc22c2931dd92f37a70e",
+      "createdAt": "2026-11-18T16:06:19.336Z",
+      "updatedAt": "2026-11-18T16:06:19.336Z",
+      "savedHomestays": []
     }
   ],
   "homestays": [

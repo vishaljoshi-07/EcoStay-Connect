@@ -189,6 +189,16 @@ export const mockLogin = (email, password) => {
     throw new Error('No account found with this email. Please register and create an account first.');
   }
 
+  // Strictly verify password!
+  if (!password) {
+    throw new Error('Please enter your password.');
+  }
+
+  if (user.password && user.password !== password) {
+    console.warn(`[ECOSTAY AUTH WARNING] Login failed: Incorrect password for '${qEmail}'.`);
+    throw new Error('Incorrect password. Please verify your password and try again.');
+  }
+
   const token = 'mock_jwt_token_' + Date.now() + '_' + Math.random().toString(36).substring(2);
 
   console.log('\n==================================================');
@@ -203,7 +213,15 @@ export const mockLogin = (email, password) => {
     success: true,
     message: 'Login successful (Demo Mode)',
     token,
-    data: user
+    data: {
+      _id: user._id || user.id,
+      id: user._id || user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profileImage: user.profileImage,
+      savedHomestays: user.savedHomestays || []
+    }
   };
 };
 
@@ -217,7 +235,7 @@ export const mockRegister = (userData) => {
   const existing = users.find(u => u.email.toLowerCase() === qEmail);
 
   if (existing) {
-    return mockLogin(qEmail, userData.password);
+    throw new Error('A user with this email address already exists. Please log in instead.');
   }
 
   const newUser = {
@@ -225,6 +243,7 @@ export const mockRegister = (userData) => {
     id: 'usr_' + Date.now().toString(36),
     name: userData.name || 'Eco Traveler',
     email: qEmail,
+    password: userData.password,
     role: userData.role || 'customer',
     profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
     savedHomestays: []
@@ -247,7 +266,15 @@ export const mockRegister = (userData) => {
     success: true,
     message: 'Registration successful (Demo Mode)',
     token,
-    data: newUser
+    data: {
+      _id: newUser._id,
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      profileImage: newUser.profileImage,
+      savedHomestays: []
+    }
   };
 };
 
@@ -341,4 +368,207 @@ export const deleteMockBooking = (bookingId) => {
     message: 'Booking cancelled successfully (Demo Mode)',
     data: { _id: bookingId }
   };
+};
+
+// Mock AI Response Generator
+export const generateMockAiResponse = (userPrompt) => {
+  const p = (userPrompt || '').toLowerCase();
+
+  // Greetings / Identity
+  if (p === 'hi' || p === 'hello' || p === 'hey' || p.includes('who are you') || p.includes('what can you do')) {
+    return `### 🌿 Hello from EcoStay Connect AI!
+
+I am your personal **Sustainable Travel Assistant**. I am here to help you plan responsible, low-impact, and enriching travel experiences across India and beyond.
+
+Here are a few things you can ask me:
+* **Custom Itineraries:** *"Plan a 3-day eco-friendly trip to Coorg or Manali"*
+* **Homestay Recommendations:** *"Suggest top eco homestays with solar power & organic food"*
+* **Zero-Waste Travel:** *"What should I pack for a plastic-free mountain trek?"*
+* **Carbon Footprint:** *"How can I travel sustainably across Himachal Pradesh?"*
+* **Destination Guides:** *"What are the best sustainable activities in Wayanad or Rishikesh?"*
+
+What journey can I help you design today?`;
+  }
+
+  // Coorg
+  if (p.includes('coorg')) {
+    return `### ☕ Eco-Travel Guide: Coorg (Kodagu, Karnataka)
+
+Known as the *Scotland of India*, Coorg is famous for misty coffee plantations, rolling hills, and rich Kodava biodiversity.
+
+#### 🏡 Recommended Stay:
+* **Cloud-Kissed Mud Haven** (Madikeri, Coorg)
+  * **Eco Features:** Vernacular mud construction, biogas energy, solar water heating, organic farm-to-table dining.
+  * **Starting Price:** ₹2,800/night | **Sustainability Rating:** 4.7 ★
+
+#### 🌿 3-Day Green Itinerary:
+* **Day 1:** Arrive via public EV bus from Mysore. Check into your mud cottage. Afternoon plantation walk learning about shade-grown organic coffee and honey harvesting.
+* **Day 2:** Early morning birdwatching at Nagarhole boundary. Visit Abbey Falls with a reusable canteen (avoid plastic water bottles). Evening traditional Kodava dinner.
+* **Day 3:** Trek to Mandalpatti peak on designated trails to preserve native soil. Support local women cooperatives selling organic spices before heading home.
+
+💡 *Eco Tip: Choose shade-grown coffee brands — they preserve the rainforest canopy and support bird nesting habitats.*`;
+  }
+
+  // Manali / Himachal
+  if (p.includes('manali') || p.includes('himachal')) {
+    return `### 🏔️ Sustainable Travel Guide: Manali & Himachal Pradesh
+
+The Himalayan alpine ecosystem is delicate and needs mindful, conscious travelers.
+
+#### 🏡 Recommended Stay:
+* **The Whispering Pines Sanctuary** (Manali, HP)
+  * **Eco Features:** 100% Solar-powered, on-site organic apple orchard, rainwater harvesting, zero single-use plastics.
+  * **Starting Price:** ₹3,500/night | **Sustainability Rating:** 4.9 ★
+
+#### 🌲 Eco Highlights & Green Tips:
+1. **Low-Carbon Transport:** Take the Vande Bharat or overnight electric Volvo bus from Delhi/Chandigarh to minimize road emissions.
+2. **Alpine Etiquette:** Stay strictly on marked trails in Solang and Rohtang to prevent soil erosion.
+3. **Carry a Water Purifier Bottle:** Refill from natural mountain spring taps instead of buying disposable bottles.
+4. **Local Support:** Buy hand-knitted woolen shawls directly from artisan weavers in Kullu.`;
+  }
+
+  // Wayanad / Kerala
+  if (p.includes('wayanad') || p.includes('kerala')) {
+    return `### 🌴 Green Travel Guide: Wayanad & Kerala
+
+Wayanad is part of the Nilgiri Biosphere Reserve, renowned for bamboo architecture, spice forests, and tranquil backwaters.
+
+#### 🏡 Recommended Stay:
+* **Emerald Valley Bamboo Retreat** (Wayanad, Kerala)
+  * **Eco Features:** Built entirely from renewable local bamboo, zero concrete footprint, natural stream filtration, traditional Ayurveda herb garden.
+  * **Starting Price:** ₹4,200/night | **Sustainability Rating:** 4.8 ★
+
+#### 🌿 Must-Experience Activities:
+* **Edakkal Caves Exploration:** Trek to the Neolithic petroglyphs with a licensed local guide.
+* **Bamboo Craft Workshop:** Learn weaving techniques from indigenous Uravu artisans.
+* **Kuruva Island Nature Walk:** A river delta protected by dense evergreen canopy.`;
+  }
+
+  // Almora / Uttarakhand
+  if (p.includes('almora') || p.includes('uttarakhand') || p.includes('nainital')) {
+    return `### ⛰️ Eco Travel Guide: Almora & Kumaon Hills
+
+Experience traditional hill architecture, quiet pine ridges, and spectacular panoramic vistas of Nanda Devi.
+
+#### 🏡 Recommended Stay:
+* **Himalayan Stone Eco-Cottage** (Almora, Uttarakhand)
+  * **Eco Features:** Restored vintage Kumaoni stone architecture, passive solar warmth, recycled greywater for herb beds, zero waste policy.
+  * **Starting Price:** ₹3,100/night | **Sustainability Rating:** 4.9 ★
+
+#### 🌿 Green Recommendations:
+* **Binsar Wildlife Sanctuary:** Ideal for peaceful walks through oak and rhododendron forests without motor vehicle noise.
+* **Support Local Cooperatives:** Purchase natural wild apricot oil and rhododendron squash from Kumaon village societies.`;
+  }
+
+  // Rishikesh
+  if (p.includes('rishikesh')) {
+    return `### 🌊 Mindful Travel Guide: Rishikesh
+
+The spiritual capital situated on the banks of the sacred Ganges river.
+
+#### 🏡 Recommended Stay:
+* **Ganges Edge Mud Retreat** (Rishikesh, Uttarakhand)
+  * **Eco Features:** Solar energy, vegan zero-oil Ayurvedic kitchen, natural lime & mud cooling, riverside cleanup initiatives.
+  * **Starting Price:** ₹2,500/night | **Sustainability Rating:** 4.6 ★
+
+#### 🧘 Conscious Highlights:
+* Sunrise yoga sessions using natural jute mats by the river.
+* Participation in community clean-up drives along the holy riverbank.
+* Organic farm dining along the Tapovan hills.`;
+  }
+
+  // Itinerary
+  if (p.includes('itinerary') || p.includes('trip') || p.includes('plan') || p.includes('days')) {
+    const daysMatch = p.match(/(\d+)\s*day/);
+    const numDays = daysMatch ? parseInt(daysMatch[1]) : 3;
+
+    return `### 🌿 Custom ${numDays}-Day Eco-Friendly Travel Itinerary
+
+Here is your tailored blueprint for an environmentally conscious journey:
+
+**Day 1: Arrival, Settling In & Local Immersion**
+* **Morning:** Check into your certified eco-homestay. Relax with a welcome herbal infusion sourced from the property garden.
+* **Afternoon:** Tour the sustainable infrastructure — observe solar setups, rainwater systems, and composting methods.
+* **Evening:** Farm-to-table dinner featuring seasonal local specialties prepared by the host family.
+
+**Day 2: Low-Impact Exploration & Nature Connection**
+* **Morning:** Sunrise nature walk or birdwatching led by an indigenous village guide.
+* **Afternoon:** Zero-waste picnic using cloth totes, steel lunch containers, and filtered spring water.
+* **Evening:** Traditional handicraft demonstration or stargazing under clear, unpolluted mountain skies.
+
+${numDays >= 3 ? `**Day 3: Cultural Exchange & Community Impact**
+* **Morning:** Visit local organic farmers or village artisan cooperatives.
+* **Afternoon:** Participate in a tree-planting session or local conservation activity.
+* **Evening:** Farewell community meal and carbon-offset calculation review for your journey home.` : ''}
+
+---
+💡 **Sustainable Checklist:**
+1. Carry a reusable water bottle & cloth shopping bag.
+2. Decline single-use hotel toiletries; use natural soap bars.
+3. Travel by train or shared EV wherever feasible.`;
+  }
+
+  // Homestays
+  if (p.includes('homestay') || p.includes('recommend') || p.includes('hotel') || p.includes('stay') || p.includes('book')) {
+    return `### 🏡 EcoStay Connect: Featured Sustainable Homestays
+
+All properties listed on EcoStay Connect undergo rigorous verification across 5 key ecological pillars: renewable energy, waste management, water conservation, local community employment, and cultural preservation.
+
+1. **The Whispering Pines Sanctuary** — *Manali, HP* (₹3,500/night)
+   * 100% Solar-powered, on-site organic orchard, mountain spring water.
+2. **Emerald Valley Bamboo Retreat** — *Wayanad, Kerala* (₹4,200/night)
+   * Biophilic bamboo design, zero concrete, native Ayurveda herbal gardens.
+3. **Cloud-Kissed Mud Haven** — *Coorg, Karnataka* (₹2,800/night)
+   * Hand-built mud cottage, biogas cooking fuel, farm-to-table dining.
+4. **Himalayan Stone Eco-Cottage** — *Almora, Uttarakhand* (₹3,100/night)
+   * Restored vintage stone architecture, passive solar design, zero waste policy.
+5. **Ganges Edge Mud Retreat** — *Rishikesh, Uttarakhand* (₹2,500/night)
+   * Solar water heating, vegan kitchen, zero single-use plastic.
+
+*To reserve any homestay, simply click "Book Now" on the homestay card, select your dates and guests, and confirm your booking instantly.*`;
+  }
+
+  // Packing
+  if (p.includes('pack') || p.includes('waste') || p.includes('plastic') || p.includes('zero')) {
+    return `### 🎒 The Ultimate Zero-Waste Travel Packing Checklist
+
+Minimizing non-biodegradable waste is one of the highest impact choices an eco-traveler can make.
+
+#### 🧰 The Essential Eco-Kit:
+* **Hydration:** Insulated stainless-steel water bottle + portable UV water purifier or LifeStraw.
+* **Dining on the Go:** Compact bamboo cutlery set, collapsible silicone lunchbox, and cloth napkins.
+* **Toiletries:** Solid shampoo and conditioner bars, bamboo toothbrush, natural toothpaste tablets, and biodegradable sunscreen.
+* **Shopping & Laundry:** 2 compact cotton tote bags and a washable mesh laundry bag.
+* **Electronics:** High-capacity solar power bank to recharge your devices sustainably.
+
+#### ⚠️ Single-Use Items to Refuse:
+* Plastic straw drinks
+* Hotel sample-size shampoo bottles
+* Plastic carrier bags
+* Disposable plastic cutlery on flights/trains`;
+  }
+
+  // Carbon
+  if (p.includes('carbon') || p.includes('transport') || p.includes('footprint') || p.includes('emission')) {
+    return `### 🚗 How to Minimize Your Travel Carbon Footprint
+
+Transport accounts for approximately **70% of global tourism emissions**. Here is how to lower your impact:
+
+1. **Prioritize Trains over Flights:** Traveling by train emits up to **80% less carbon** per passenger-kilometer compared to short-haul flights.
+2. **Embrace Electric Transport:** Look for electric bus services and shared EV cabs.
+3. **Slow Travel:** Spend more days in one destination rather than hopping across multiple towns. You immerse deeper and travel fewer miles.
+4. **Eat Seasonally and Locally:** Plant-forward, locally sourced meals drastically reduce the food miles associated with your holiday.
+5. **Stay in Passive-Energy Homestays:** EcoStay properties utilize natural ventilation, thermal mass (mud/stone), and solar arrays to cut energy demand.`;
+  }
+
+  return `### 🌱 Sustainable Travel Guide & Recommendations
+
+Thank you for consulting **EcoStay Connect AI**! Here are the core values guiding sustainable travel:
+
+* **Support Local Economies:** When you book an authentic family-run homestay, your money goes directly to local residents rather than multinational hotel chains.
+* **Conserve Fragile Ecosystems:** Avoid single-use plastics, stick to designated hiking trails, and respect wildlife buffer zones.
+* **Preserve Cultural Heritage:** Learn a few words in the regional language and honor local dress codes and customs.
+* **Lower Your Impact:** Choose accommodations certified for renewable energy, composting, and water harvesting.
+
+*Feel free to ask for specific destination advice (e.g., Coorg, Manali, Wayanad), packing checklists, custom itineraries, or homestay recommendations!*`;
 };

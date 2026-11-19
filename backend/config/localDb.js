@@ -296,8 +296,11 @@ const wrapDoc = (collectionName, doc) => {
 
   if (collectionName === 'users') {
     wrapped.matchPassword = async function (enteredPassword) {
-      if (!this.password) return false;
-      return await bcrypt.compare(enteredPassword, this.password);
+      if (!this.password || !enteredPassword) return false;
+      if (typeof this.password === 'string' && this.password.startsWith('$2')) {
+        return await bcrypt.compare(enteredPassword, this.password);
+      }
+      return enteredPassword === this.password;
     };
   }
 

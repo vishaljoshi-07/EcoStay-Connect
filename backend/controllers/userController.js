@@ -6,7 +6,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const generateToken = (id) => {
   return jwt.sign(
     { id },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET || 'ecostay_connect_jwt_secret_key_2026_super_secure',
     { expiresIn: '7d' }
   );
 };
@@ -70,6 +70,11 @@ const registerUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    res.status(400);
+    throw new Error('Please provide both email and password');
+  }
+
   // Find user by email
   const user = await User.findOne({ email: email.toLowerCase() });
 
@@ -80,7 +85,8 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   // Check user & password match
-  if (await user.matchPassword(password)) {
+  const isMatch = await user.matchPassword(password);
+  if (isMatch) {
     const token = generateToken(user._id);
 
     console.log(`[AUTH LOGIN] User authenticated: ${user.name} (${user.email}) - Role: ${user.role}`);
@@ -258,5 +264,5 @@ module.exports = {
   getUsers,
   getUserById,
   deleteUser,
-  generateToken
+  generateToken,
 };

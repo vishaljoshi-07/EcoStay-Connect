@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, User, Sparkles, Copy, Trash2, RefreshCw, Compass, MapPin, ShieldCheck, Leaf } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Copy, Trash2, Key, Check, ShieldCheck, Leaf } from 'lucide-react';
 import { aiApi } from '../services/api';
 import Toast from '../components/ui/Toast';
 import ConfirmModal from '../components/ui/ConfirmModal';
+import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
 
 function AIAssistant() {
@@ -15,6 +16,9 @@ function AIAssistant() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ isOpen: false, message: '', variant: 'success' });
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem('ecostay_gemini_key') || '');
+  const [savedKey, setSavedKey] = useState(() => localStorage.getItem('ecostay_gemini_key') || '');
 
   const chatEndRef = useRef(null);
 
@@ -33,7 +37,23 @@ function AIAssistant() {
     { label: '🏡 Top Eco Homestays', text: 'Recommend top certified eco-friendly homestays in South India with high sustainability scores.' },
     { label: '♻️ Zero-Waste Travel Tips', text: 'What are essential zero-waste travel packing tips for eco-conscious mountain trekking?' },
     { label: '🚗 Low-Carbon Transport', text: 'How can I minimize my carbon footprint when traveling across Himachal Pradesh?' },
+    { label: '🏔️ Plan Manali Trip', text: 'Plan a sustainable 3-day alpine holiday to Manali with minimal environmental impact.' },
   ];
+
+  const handleSaveApiKey = (e) => {
+    e.preventDefault();
+    const cleanKey = apiKeyInput.trim();
+    if (cleanKey) {
+      localStorage.setItem('ecostay_gemini_key', cleanKey);
+      setSavedKey(cleanKey);
+      setToast({ isOpen: true, message: 'Google Gemini API key saved! Live Gemini AI is now active.', variant: 'success' });
+    } else {
+      localStorage.removeItem('ecostay_gemini_key');
+      setSavedKey('');
+      setToast({ isOpen: true, message: 'API key removed. Running on EcoStay Knowledge Engine.', variant: 'info' });
+    }
+    setShowKeyModal(false);
+  };
 
   const handleSendPrompt = async (e, customPrompt) => {
     if (e) e.preventDefault();
@@ -53,24 +73,27 @@ function AIAssistant() {
     setLoading(true);
 
     try {
-      const response = await aiApi.chat(inputPrompt.trim());
+      const response = await aiApi.chat(inputPrompt.trim(), savedKey);
 
-      if (response.success && response.data) {
+      if (response && (response.success || response.data)) {
+        const rawText = response.data?.response || response.data?.reply || response.data?.message || (typeof response.data === 'string' ? response.data : 'I am here to assist with your sustainable travel plans!');
+        const source = response.data?.source || (savedKey ? 'Google Gemini 1.5 Flash' : 'EcoStay AI Engine');
+
         const aiMsg = {
           sender: 'ai',
-          text: response.data.response,
-          source: response.data.source,
+          text: rawText,
+          source: source,
           timestamp: new Date().toLocaleTimeString()
         };
         setMessages((prev) => [...prev, aiMsg]);
       } else {
-        throw new Error(response.message || 'AI request failed');
+        throw new Error(response?.message || 'AI request failed');
       }
     } catch (err) {
       console.error('AI Error:', err);
       setToast({
         isOpen: true,
-        message: err.message || 'Failed to connect to AI Assistant. Please check your network.',
+        message: err.message || 'Failed to connect to AI Assistant. Please check your connection.',
         variant: 'error'
       });
     } finally {
@@ -99,7 +122,7 @@ function AIAssistant() {
           <div className="space-y-1.5 text-left relative z-10">
             <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs uppercase tracking-widest">
               <Sparkles className="h-4 w-4" />
-              <span>Google Gemini AI Engine</span>
+              <span>{savedKey ? 'Google Gemini AI (Live Key Active)' : 'EcoStay AI Knowledge Engine'}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight">
               Eco Travel Assistant
@@ -109,15 +132,30 @@ function AIAssistant() {
             </p>
           </div>
 
-          {messages.length > 0 && (
+          <div className="flex items-center space-x-2 self-start sm:self-auto z-10">
             <button
-              onClick={() => setShowClearModal(true)}
-              className="self-start sm:self-auto bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer"
+              onClick={() => setShowKeyModal(true)}
+              className={`border px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                savedKey
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/30'
+                  : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+              }`}
+              title="Configure Gemini API Key"
             >
-              <Trash2 className="h-4 w-4" />
-              <span>Clear History</span>
+              <Key className="h-3.5 w-3.5" />
+              <span>{savedKey ? 'API Key Set' : 'Set Gemini Key'}</span>
             </button>
-          )}
+
+            {messages.length > 0 && (
+              <button
+                onClick={() => setShowClearModal(true)}
+                className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Clear</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Preset Prompt Chips */}
@@ -211,7 +249,7 @@ function AIAssistant() {
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-750 p-4 rounded-3xl rounded-tl-none flex items-center space-x-3 text-sm font-semibold text-slate-500">
                     <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                    <span>AI is crafting your eco-plan...</span>
+                    <span>AI is crafting your eco-response...</span>
                   </div>
                 </div>
               )}
@@ -226,7 +264,7 @@ function AIAssistant() {
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ask for itineraries, homestays, zero-waste travel tips..."
+              placeholder="Ask for itineraries, homestays, zero-waste tips, or destinations..."
               disabled={loading}
               className="flex-grow bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 py-3.5 px-5 rounded-2xl text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
             />
@@ -243,6 +281,60 @@ function AIAssistant() {
         </div>
 
       </div>
+
+      {/* API Key Modal */}
+      <Modal
+        isOpen={showKeyModal}
+        onClose={() => setShowKeyModal(false)}
+        title="Configure Google Gemini API Key"
+      >
+        <form onSubmit={handleSaveApiKey} className="space-y-4 text-left">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Paste your Google Gemini API key to activate live Gemini 1.5 Flash responses. If left blank, the built-in EcoStay Knowledge Engine will answer all travel and sustainability questions with 100% reliability.
+          </p>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1.5">
+              Gemini API Key
+            </label>
+            <input
+              type="password"
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder="AIzaSy..."
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 py-2.5 px-4 rounded-xl text-sm font-mono text-slate-800 dark:text-slate-100 focus:outline-none"
+            />
+            <span className="text-xs text-slate-400 dark:text-slate-500 mt-1 block">
+              Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-emerald-600 dark:text-emerald-400 underline font-medium">Google AI Studio</a>.
+            </span>
+          </div>
+
+          <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+            {savedKey && (
+              <button
+                type="button"
+                onClick={() => {
+                  setApiKeyInput('');
+                  localStorage.removeItem('ecostay_gemini_key');
+                  setSavedKey('');
+                  setShowKeyModal(false);
+                  setToast({ isOpen: true, message: 'API key removed. Using EcoStay Engine.', variant: 'info' });
+                }}
+                className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold py-2.5 px-4 rounded-xl cursor-pointer"
+              >
+                Clear Key
+              </button>
+            )}
+            <button
+              type="submit"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-5 rounded-xl cursor-pointer flex items-center space-x-1.5 shadow-sm"
+            >
+              <Check className="h-4 w-4" />
+              <span>Save Key</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <ConfirmModal
         isOpen={showClearModal}
